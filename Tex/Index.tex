@@ -369,8 +369,34 @@
     
 
     
-    \hypertarget{jupyter-site}{%
-\section{Jupyter Site}\label{jupyter-site}}
+    \hypertarget{reinforcement-learning-using-openai-gym}{%
+\section{Reinforcement Learning Using OpenAI
+Gym}\label{reinforcement-learning-using-openai-gym}}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{11}{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{import} \PY{n+nn}{gym}
+
+\PY{n}{env} \PY{o}{=} \PY{n}{gym}\PY{o}{.}\PY{n}{make}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Acrobot\PYZhy{}v1}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{observation} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{reset}\PY{p}{(}\PY{p}{)}
+
+\PY{n}{done} \PY{o}{=} \PY{k+kc}{False}
+\PY{k}{while} \PY{o+ow}{not} \PY{n}{done}\PY{p}{:}
+  \PY{n}{env}\PY{o}{.}\PY{n}{render}\PY{p}{(}\PY{p}{)}
+  \PY{n}{action} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{action\PYZus{}space}\PY{o}{.}\PY{n}{sample}\PY{p}{(}\PY{p}{)} \PY{c+c1}{\PYZsh{} your agent here (this takes random actions)}
+  \PY{n}{observation}\PY{p}{,} \PY{n}{reward}\PY{p}{,} \PY{n}{done}\PY{p}{,} \PY{n}{info} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{step}\PY{p}{(}\PY{n}{action}\PY{p}{)}
+
+\PY{n}{env}\PY{o}{.}\PY{n}{close}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{ }{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+
+\end{Verbatim}
+\end{tcolorbox}
 
 
     % Add a bibliography block to the postdoc
