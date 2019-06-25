@@ -1,0 +1,21 @@
+cd Notebooks
+for %%f in (*.ipynb) do (
+   jupyter-nbconvert --to html %%f
+   del ..\Html\%%~nf.html
+   move %%~nf.html ..\Html\%%~nf.html
+
+   jupyter-nbconvert --to latex %%f
+   del ..\Tex\%%~nf.tex
+   move %%~nf.tex ..\Tex\%%~nf.tex
+
+   jupyter-nbconvert --to pdf %%f
+   del ..\Pdfs\%%~nf.pdf
+   move %%~nf.pdf ..\Pdfs\%%~nf.pdf
+)
+cd ..
+
+set /p UserInput="Commit message: "
+
+git add .
+git commit -m "%UserInput%"
+git push
