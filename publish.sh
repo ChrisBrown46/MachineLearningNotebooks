@@ -18,16 +18,6 @@ for f in "${arr[@]}"; do
    # Move to the Html directory
    mv Notebooks/"$filename".html  Html/"$filename".html
 
-   # Convert the Notebook to slides
-   jupyter-nbconvert --to slides Notebooks/"$filename".ipynb --reveal-prefix=reveal.js
-   # Move to the Slides directory
-   mv Notebooks/"$filename".slides.html  Slides/"$filename".html
-
-   # Convert the Notebook to Markdown
-   jupyter-nbconvert --to markdown Notebooks/"$filename".ipynb
-   # Move to the Markdown directory
-   mv Notebooks/"$filename".md  Markdown/"$filename".md
-
    # Convert the Notebook to Latex
    jupyter-nbconvert --to latex Notebooks/"$filename".ipynb
    # Move to the Tex directory
@@ -47,11 +37,11 @@ done
 mkdir -p /tmp/workspace
 cp -r * /tmp/workspace/
 git add -A .
-git commit -m "Update Slides"
+git commit -m "Update Pages"
 git checkout -B gh-pages
 cp -r /tmp/workspace/* .
 git add -A .
-git commit -m "Update Slides"
+git commit -m "Update Pages"
 git push origin master gh-pages
 git checkout master
 rm -rf /tmp/workspace
