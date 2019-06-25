@@ -36,15 +36,9 @@ for f in "${arr[@]}"; do
    cd ..
 done
 
-# Push the updates to gh-pages
-mkdir -p /tmp/workspace
-cp -r * /tmp/workspace/
-git add -A .
-git commit -m "Update Pages"
-git checkout -B gh-pages
-cp -r /tmp/workspace/* .
-git add -A .
-git commit -m "Update Pages"
-git push origin master gh-pages
-git checkout master
-rm -rf /tmp/workspace
+# Push the updates to github
+read message
+
+git add .
+git commit -m "$message"
+git push
