@@ -373,30 +373,187 @@
 \section{Reinforcement Learning Using OpenAI
 Gym}\label{reinforcement-learning-using-openai-gym}}
 
+    \hypertarget{quick-introduction-to-rl-reinforcement-learning}{%
+\subsection{Quick Introduction to RL (Reinforcement
+Learning)}\label{quick-introduction-to-rl-reinforcement-learning}}
+
+Reinforcement learning (RL) is an area of machine learning concerned
+with how software agents ought to take actions in an environment so as
+to maximize some notion of cumulative reward. Reinforcement learning is
+one of three basic machine learning paradigms, alongside supervised
+learning and unsupervised learning.
+
+It differs from supervised learning in that labelled input/output pairs
+need not be presented, and sub-optimal actions need not be explicitly
+corrected. Instead the focus is finding a balance between exploration
+(of uncharted territory) and exploitation (of current knowledge).
+
+The environment is typically formulated as a Markov decision process
+(MDP), as many reinforcement learning algorithms for this context
+utilize dynamic programming techniques. The main difference between the
+classical dynamic programming methods and reinforcement learning
+algorithms is that the latter do not assume knowledge of an exact
+mathematical model of the MDP and they target large MDPs where exact
+methods become infeasible.
+
+\textbf{source}: https://en.wikipedia.org/wiki/Reinforcement\_learning
+
+    \hypertarget{experiments-with-openai-gym}{%
+\subsection{Experiments with OpenAI
+Gym}\label{experiments-with-openai-gym}}
+
+Gym is a toolkit for developing and comparing reinforcement learning
+algorithms. It makes no assumptions about the structure of your agent,
+and is compatible with any numerical computation library, such as
+TensorFlow or Theano.
+
+The gym library is a collection of test problems --- environments ---
+that you can use to work out your reinforcement learning algorithms.
+These environments have a shared interface, allowing you to write
+general algorithms.
+
+\textbf{source}: https://gym.openai.com/docs/
+
+    \hypertarget{learn-by-doing-a-reinforcement-learning-experiment-using-openai-gym}{%
+\subsection{Learn by doing -- A reinforcement learning experiment using
+OpenAI
+Gym}\label{learn-by-doing-a-reinforcement-learning-experiment-using-openai-gym}}
+
+    \hypertarget{creating-a-gym-environment}{%
+\subsubsection{Creating a Gym
+environment}\label{creating-a-gym-environment}}
+
+To start using OpenAI Gym, one must install it and import it into a
+Python environment. One can either use a pre-made environment for
+testing, or build their own.
+
+For this experiment, I will be using the pre-built `Acrobot'
+environment. The state consists of the sin() and cos() of the two
+rotational joint angles and the joint angular velocities {[}cos(theta1)
+sin(theta1) cos(theta2) sin(theta2) thetaDot1 thetaDot2{]}. The action
+is either applying +1, 0 or -1 torque on the joint between the two
+pendulum links. The goal is to get the movable joint above the thin
+black line. The reward is either 1 or -1, depending on the success of
+the agent.
+
+We can view the action and observation space as follows.
+
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{11}{\hspace{4pt}}
+\prompt{In}{incolor}{1}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{gym}
 
 \PY{n}{env} \PY{o}{=} \PY{n}{gym}\PY{o}{.}\PY{n}{make}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Acrobot\PYZhy{}v1}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
 \PY{n}{observation} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{reset}\PY{p}{(}\PY{p}{)}
 
+\PY{n+nb}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Action Space Shape: }\PY{l+s+si}{\PYZob{}env.action\PYZus{}space\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n+nb}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Action Example: }\PY{l+s+s2}{\PYZob{}}\PY{l+s+s2}{env.action\PYZus{}space.sample()\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+\PY{n+nb}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Observation Space Shape: }\PY{l+s+si}{\PYZob{}env.observation\PYZus{}space\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n+nb}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Observation Example: }\PY{l+s+si}{\PYZob{}observation\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Action Space Shape: Discrete(3)
+Action Example: 1
+Observation Space Shape: Box(6,)
+Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194
+0.08784581  0.05837633]
+\end{Verbatim}
+
+    We can also render the environment, until an episode completes, as
+follows.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{2}{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Enables recording}
+\PY{c+c1}{\PYZsh{} import gym}
+\PY{c+c1}{\PYZsh{} from gym.wrappers import Monitor}
+\PY{c+c1}{\PYZsh{} env = gym.make(\PYZdq{}Acrobot\PYZhy{}v1\PYZdq{})}
+\PY{c+c1}{\PYZsh{} env = Monitor(env, \PYZsq{}./video\PYZsq{})}
+
+\PY{n}{env}\PY{o}{.}\PY{n}{reset}\PY{p}{(}\PY{p}{)}
 \PY{n}{done} \PY{o}{=} \PY{k+kc}{False}
+
 \PY{k}{while} \PY{o+ow}{not} \PY{n}{done}\PY{p}{:}
   \PY{n}{env}\PY{o}{.}\PY{n}{render}\PY{p}{(}\PY{p}{)}
-  \PY{n}{action} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{action\PYZus{}space}\PY{o}{.}\PY{n}{sample}\PY{p}{(}\PY{p}{)} \PY{c+c1}{\PYZsh{} your agent here (this takes random actions)}
+  \PY{n}{action} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{action\PYZus{}space}\PY{o}{.}\PY{n}{sample}\PY{p}{(}\PY{p}{)}
   \PY{n}{observation}\PY{p}{,} \PY{n}{reward}\PY{p}{,} \PY{n}{done}\PY{p}{,} \PY{n}{info} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{step}\PY{p}{(}\PY{n}{action}\PY{p}{)}
 
 \PY{n}{env}\PY{o}{.}\PY{n}{close}\PY{p}{(}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
+    In the prior code block, we take random actions and only utilize the
+\texttt{done} information to determine if a session has finished. You
+can either run the code to see the animation for youself, or view the
+video below.
+
+    
+
+    \hypertarget{building-a-smarter-agent}{%
+\subsection{Building a smarter agent}\label{building-a-smarter-agent}}
+
+\hypertarget{tabular}{%
+\subsubsection{Tabular}\label{tabular}}
+
+Tabular methods use arrays and tables to hold an approximate of the
+value functions. More simply, they store every combination of
+state/action pairs and hold a perceived value of that pair. This
+simplifies the learning process because tables are very quick to compute
+and can give decent results given the state and action spaces are small
+enough. One can also reduce the size of the state and action spaces to
+make the agent learn evey quicker due to a smaller table to fill (at the
+cost of a reduced accuracy). One idea that can be implemented, that I
+will not use in the Acrobot example, is to transform state values before
+binning them. For example, one could use a sigmoid function to spread
+the state values out so that the center distrubtion gets put into more
+bins while the outliers get grouped together.
+
+To apply a tabular method to this Acrobot example, we simply need a
+table that holds every possible state/action pair. Due to the size of
+this table, I bin the state values into 5 buckets so that there are 3 *
+6\^{}5 values to compute. I also add a randomness factor to force my
+agent to explore more in the beginning then slowly exploit more as it
+learns. I have the training render a session every 10,000 sessions. To
+disable this, comment out the render or change the
+\texttt{RENDER\_STEPS} variable.
+
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
 \prompt{In}{incolor}{ }{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
-
+\PY{c+c1}{\PYZsh{} Configuration Values}
 \end{Verbatim}
 \end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{ }{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Table Class}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{ }{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Training}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{ }{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} VIDEO (HTML) DEMONSTRATION}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{dqn}{%
+\subsubsection{DQN}\label{dqn}}
+
+\hypertarget{ppo}{%
+\subsubsection{PPO}\label{ppo}}
 
 
     % Add a bibliography block to the postdoc
