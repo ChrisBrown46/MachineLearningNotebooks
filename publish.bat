@@ -14,6 +14,9 @@ for %%f in (*.ipynb) do (
 )
 cd ..
 
+del /Q docs\assets\*
+xcopy Notebooks\assets docs\assets
+
 set /p UserInput="Commit message: "
 
 git add .
