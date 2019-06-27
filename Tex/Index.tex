@@ -427,23 +427,20 @@ To start using OpenAI Gym, one must install it and import it into a
 Python environment. One can either use a pre-made environment for
 testing, or build their own.
 
-For this experiment, I will be using the pre-built `Acrobot'
-environment. The state consists of the sin() and cos() of the two
-rotational joint angles and the joint angular velocities {[}cos(theta1)
-sin(theta1) cos(theta2) sin(theta2) thetaDot1 thetaDot2{]}. The action
-is either applying +1, 0 or -1 torque on the joint between the two
-pendulum links. The goal is to get the movable joint above the thin
-black line. The reward is either 1 or -1, depending on the success of
-the agent.
+For this experiment, I will be using the pre-built `CartPole'
+environment. The state consists of the cart's position and velocity, and
+the pole's angle and velocity. The actions are applying a force of +1 or
+-1 to the cart. The goal is to keep the pole balanced for 500 game
+steps. The reward is 1 on each step for as long as the pole is balanced.
 
 We can view the action and observation space as follows.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{1}{\hspace{4pt}}
+\prompt{In}{incolor}{2}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{k+kn}{import} \PY{n+nn}{gym}
 
-\PY{n}{env} \PY{o}{=} \PY{n}{gym}\PY{o}{.}\PY{n}{make}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Acrobot\PYZhy{}v1}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{env} \PY{o}{=} \PY{n}{gym}\PY{o}{.}\PY{n}{make}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{CartPole\PYZhy{}v1}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
 \PY{n}{observation} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{reset}\PY{p}{(}\PY{p}{)}
 
 \PY{n+nb}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Action Space Shape: }\PY{l+s+si}{\PYZob{}env.action\PYZus{}space\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
@@ -455,18 +452,17 @@ We can view the action and observation space as follows.
 \end{tcolorbox}
 
     \begin{Verbatim}[commandchars=\\\{\}]
-Action Space Shape: Discrete(3)
+Action Space Shape: Discrete(2)
 Action Example: 1
-Observation Space Shape: Box(6,)
-Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194
-0.08784581  0.05837633]
+Observation Space Shape: Box(4,)
+Observation Example: [ 0.0132411   0.0352145  -0.028805   -0.01244701]
 \end{Verbatim}
 
     We can also render the environment, until an episode completes, as
 follows.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{2}{\hspace{4pt}}
+\prompt{In}{incolor}{3}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{c+c1}{\PYZsh{} Enables recording}
 \PY{c+c1}{\PYZsh{} import gym}
@@ -491,13 +487,10 @@ follows.
 can either run the code to see the animation for youself, or view the
 video below.
 
-    
-
-    \hypertarget{building-a-smarter-agent}{%
-\subsection{Building a smarter agent}\label{building-a-smarter-agent}}
-
-\hypertarget{tabular}{%
-\subsubsection{Tabular}\label{tabular}}
+    \hypertarget{building-a-smarter-agent-with-reinforcement-learning-and-tabular-methods}{%
+\subsection{Building a smarter agent with reinforcement learning and
+tabular
+methods}\label{building-a-smarter-agent-with-reinforcement-learning-and-tabular-methods}}
 
 Tabular methods use arrays and tables to hold an approximate of the
 value functions. More simply, they store every combination of
@@ -512,48 +505,299 @@ binning them. For example, one could use a sigmoid function to spread
 the state values out so that the center distrubtion gets put into more
 bins while the outliers get grouped together.
 
-To apply a tabular method to this Acrobot example, we simply need a
+To apply a tabular method to this CartPole example, we simply need a
 table that holds every possible state/action pair. Due to the size of
-this table, I bin the state values into 5 buckets so that there are 3 *
-6\^{}5 values to compute. I also add a randomness factor to force my
+this table, I bin the state values into 20 buckets so that there are 2 *
+4\^{}20 values to compute. I also add a randomness factor to force my
 agent to explore more in the beginning then slowly exploit more as it
-learns. I have the training render a session every 10,000 sessions. To
-disable this, comment out the render or change the
-\texttt{RENDER\_STEPS} variable.
+learns. Feel free to edit the global variables (hyperparameters) to see
+what happens. This tabular method is also very random in how well it
+does with a small amount of sessions.
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{ }{\hspace{4pt}}
+\prompt{In}{incolor}{7}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{c+c1}{\PYZsh{} Configuration Values}
+\PY{c+c1}{\PYZsh{} Configuration Values and Imports}
+
+\PY{k+kn}{import} \PY{n+nn}{gym}
+
+\PY{n}{env} \PY{o}{=} \PY{n}{gym}\PY{o}{.}\PY{n}{make}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{CartPole\PYZhy{}v1}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+\PY{k+kn}{import} \PY{n+nn}{matplotlib}\PY{n+nn}{.}\PY{n+nn}{pyplot} \PY{k}{as} \PY{n+nn}{plt}
+\PY{k+kn}{import} \PY{n+nn}{math}
+\PY{k+kn}{import} \PY{n+nn}{numpy} \PY{k}{as} \PY{n+nn}{np}
+\PY{k+kn}{import} \PY{n+nn}{random}
+
+\PY{n}{RENDER\PYZus{}STEPS} \PY{o}{=} \PY{l+m+mi}{250}
+\PY{n}{SESSIONS} \PY{o}{=} \PY{l+m+mi}{500}
+
+\PY{n}{BINS} \PY{o}{=} \PY{l+m+mi}{20}
+\PY{n}{REWARD\PYZus{}DISCOUNT} \PY{o}{=} \PY{l+m+mf}{0.98}
+\PY{n}{LEARNING\PYZus{}RATE\PYZus{}DECAY} \PY{o}{=} \PY{l+m+mf}{0.995}
+\PY{n}{LEARNING\PYZus{}RATE\PYZus{}MIN} \PY{o}{=} \PY{l+m+mf}{0.150}
+\PY{n}{EXPLORATION\PYZus{}RATE} \PY{o}{=} \PY{l+m+mf}{1.0}
+\PY{n}{EXPLORATION\PYZus{}RATE\PYZus{}DECAY} \PY{o}{=} \PY{l+m+mf}{0.975}
+\PY{n}{EXPLORTATION\PYZus{}RATE\PYZus{}MIN} \PY{o}{=} \PY{l+m+mf}{0.005}
+
+\PY{n}{BUFFER\PYZus{}SIZE} \PY{o}{=} \PY{l+m+mi}{20}
 \end{Verbatim}
 \end{tcolorbox}
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{ }{\hspace{4pt}}
+\prompt{In}{incolor}{8}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
-\PY{c+c1}{\PYZsh{} Table Class}
+\PY{c+c1}{\PYZsh{} Include a plotting class to show results :]}
+
+\PY{k}{class} \PY{n+nc}{Plotter}\PY{p}{:}
+    \PY{k}{def} \PY{n+nf}{\PYZus{}\PYZus{}init\PYZus{}\PYZus{}}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+
+    \PY{k}{def} \PY{n+nf}{add\PYZus{}plot\PYZus{}pair}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{x}\PY{p}{,} \PY{n}{y}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{x}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{y}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{plot}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{,} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values}\PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{plot\PYZus{}and\PYZus{}save}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{file\PYZus{}name}\PY{p}{)}\PY{p}{:}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{,} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values}\PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{n}{file\PYZus{}name}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{plot\PYZus{}smooth\PYZus{}graph}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{averaging\PYZus{}filter\PYZus{}length}\PY{o}{=}\PY{l+m+mi}{100}\PY{p}{)}\PY{p}{:}
+        \PY{k}{if} \PY{n}{averaging\PYZus{}filter\PYZus{}length} \PY{o}{\PYZgt{}} \PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{)}\PY{p}{:}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{p}{)}
+            \PY{k}{return}
+
+        \PY{n}{rolling\PYZus{}average} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+        \PY{k}{for} \PY{n}{index} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{)}\PY{p}{)}\PY{p}{:}
+            \PY{n}{min\PYZus{}index} \PY{o}{=} \PY{n}{index} \PY{o}{\PYZhy{}} \PY{p}{(}\PY{n}{averaging\PYZus{}filter\PYZus{}length} \PY{o}{/} \PY{l+m+mi}{2}\PY{p}{)}
+            \PY{n}{min\PYZus{}index} \PY{o}{=} \PY{n+nb}{int}\PY{p}{(}\PY{l+m+mi}{0} \PY{k}{if} \PY{n}{min\PYZus{}index} \PY{o}{\PYZlt{}} \PY{l+m+mi}{0} \PY{k}{else} \PY{n}{min\PYZus{}index}\PY{p}{)}
+            \PY{n}{max\PYZus{}index} \PY{o}{=} \PY{n}{index} \PY{o}{+} \PY{p}{(}\PY{n}{averaging\PYZus{}filter\PYZus{}length} \PY{o}{/} \PY{l+m+mi}{2}\PY{p}{)}
+            \PY{n}{max\PYZus{}index} \PY{o}{=} \PY{n+nb}{int}\PY{p}{(}
+                \PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{)} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}
+                \PY{k}{if} \PY{n}{max\PYZus{}index} \PY{o}{\PYZgt{}}\PY{o}{=} \PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{)}
+                \PY{k}{else} \PY{n}{max\PYZus{}index}
+            \PY{p}{)}
+
+            \PY{n}{rolling\PYZus{}average}\PY{o}{.}\PY{n}{append}\PY{p}{(}
+                \PY{n+nb}{sum}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values}\PY{p}{[}\PY{n}{min\PYZus{}index}\PY{p}{:}\PY{n}{max\PYZus{}index}\PY{p}{]}\PY{p}{)} \PY{o}{/}\PY{o}{/} \PY{p}{(}\PY{n}{max\PYZus{}index} \PY{o}{\PYZhy{}} \PY{n}{min\PYZus{}index}\PY{p}{)}
+            \PY{p}{)}
+
+        \PY{n}{plt}\PY{o}{.}\PY{n}{title}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Steps Achieved Per Session Over Training Duration}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{xlabel}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Sessions}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{ylabel}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Steps Achieved Per Session}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{plot}\PY{p}{(}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{,}
+            \PY{n}{rolling\PYZus{}average}\PY{p}{,}
+            \PY{n}{color}\PY{o}{=}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZsh{}ade6bb}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+            \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mf}{2.5}\PY{p}{,}
+            \PY{n}{label}\PY{o}{=}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Running Average of }\PY{l+s+si}{\PYZob{}averaging\PYZus{}filter\PYZus{}length\PYZcb{}}\PY{l+s+s2}{ Sessions}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+        \PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{plot}\PY{p}{(}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}x\PYZus{}values}\PY{p}{,}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}y\PYZus{}values}\PY{p}{,}
+            \PY{n}{color}\PY{o}{=}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZsh{}e6add8}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+            \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mf}{0.25}\PY{p}{,}
+            \PY{n}{label}\PY{o}{=}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Raw Steps Achieved}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+        \PY{p}{)}
+        \PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
     \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{ }{\hspace{4pt}}
+\prompt{In}{incolor}{10}{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Some selective replay experience}
+
+\PY{k}{class} \PY{n+nc}{ReplayExperience}\PY{p}{:}
+    \PY{k}{def} \PY{n+nf}{\PYZus{}\PYZus{}init\PYZus{}\PYZus{}}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{buffer\PYZus{}size}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer\PYZus{}size} \PY{o}{=} \PY{n}{buffer\PYZus{}size}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}forgetfullness} \PY{o}{=} \PY{l+m+mf}{0.15}
+
+    \PY{k}{def} \PY{n+nf}{get\PYZus{}experience}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{k}{return} \PY{n}{random}\PY{o}{.}\PY{n}{choice}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}
+
+    \PY{k}{def} \PY{n+nf}{make\PYZus{}experience}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{value}\PY{p}{,} \PY{n}{experience}\PY{p}{)}\PY{p}{:}
+        \PY{k}{if} \PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{)} \PY{o}{\PYZlt{}} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer\PYZus{}size}\PY{p}{:}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{p}{(}\PY{n}{value}\PY{p}{,} \PY{n}{experience}\PY{p}{)}\PY{p}{)}
+            \PY{k}{return}
+
+        \PY{k}{if} \PY{n}{np}\PY{o}{.}\PY{n}{random}\PY{o}{.}\PY{n}{rand}\PY{p}{(}\PY{p}{)} \PY{o}{\PYZlt{}}\PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}forgetfullness}\PY{p}{:}
+            \PY{k}{del} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{[}\PY{n}{np}\PY{o}{.}\PY{n}{random}\PY{o}{.}\PY{n}{randint}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{)}\PY{p}{)}\PY{p}{]}
+
+        \PY{c+c1}{\PYZsh{} Find the worst memory and replace it}
+        \PY{n}{min\PYZus{}value} \PY{o}{=} \PY{n}{value}
+        \PY{n}{min\PYZus{}index} \PY{o}{=} \PY{o}{\PYZhy{}}\PY{l+m+mi}{1}
+        \PY{k}{for} \PY{n}{index} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{)}\PY{p}{)}\PY{p}{:}
+            \PY{k}{if} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{[}\PY{n}{index}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{o}{\PYZlt{}} \PY{n}{min\PYZus{}value}\PY{p}{:}
+                \PY{n}{min\PYZus{}value} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{[}\PY{n}{index}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}
+                \PY{n}{min\PYZus{}index} \PY{o}{=} \PY{n}{index}
+        \PY{k}{if} \PY{n}{min\PYZus{}index} \PY{o}{!=} \PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{:}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}buffer}\PY{p}{[}\PY{n}{min\PYZus{}index}\PY{p}{]} \PY{o}{=} \PY{p}{(}\PY{n}{value}\PY{p}{,} \PY{n}{experience}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{11}{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Main table class that includes data normalization using sigmoids}
+
+\PY{k}{class} \PY{n+nc}{Table}\PY{p}{:}
+    \PY{k}{def} \PY{n+nf}{\PYZus{}\PYZus{}init\PYZus{}\PYZus{}}\PY{p}{(}
+        \PY{n+nb+bp}{self}\PY{p}{,}
+        \PY{n}{action\PYZus{}space}\PY{p}{,}
+        \PY{n}{observation\PYZus{}space}\PY{p}{,}
+        \PY{n}{bins}\PY{p}{,}
+        \PY{n}{reward\PYZus{}dicount}\PY{p}{,}
+        \PY{n}{exploration\PYZus{}rate}\PY{p}{,}
+        \PY{n}{exploration\PYZus{}rate\PYZus{}min}\PY{p}{,}
+        \PY{n}{exploration\PYZus{}rate\PYZus{}decay}\PY{p}{,}
+        \PY{n}{learning\PYZus{}rate\PYZus{}min}\PY{p}{,}
+        \PY{n}{learning\PYZus{}rate\PYZus{}decay}\PY{p}{,}
+    \PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}action\PYZus{}space} \PY{o}{=} \PY{n}{action\PYZus{}space}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}observation\PYZus{}space} \PY{o}{=} \PY{n}{observation\PYZus{}space}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}bins} \PY{o}{=} \PY{n}{bins}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}reward\PYZus{}discount} \PY{o}{=} \PY{n}{reward\PYZus{}dicount}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate} \PY{o}{=} \PY{n}{exploration\PYZus{}rate}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate\PYZus{}min} \PY{o}{=} \PY{n}{exploration\PYZus{}rate\PYZus{}min}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate\PYZus{}decay} \PY{o}{=} \PY{n}{exploration\PYZus{}rate\PYZus{}decay}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rates} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{ones}\PY{p}{(}
+            \PY{p}{(}\PY{n}{bins} \PY{o}{*}\PY{o}{*} \PY{n}{observation\PYZus{}space}\PY{o}{.}\PY{n}{shape}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{n}{action\PYZus{}space}\PY{o}{.}\PY{n}{n}\PY{p}{)}
+        \PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rate\PYZus{}min} \PY{o}{=} \PY{n}{learning\PYZus{}rate\PYZus{}min}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rate\PYZus{}decay} \PY{o}{=} \PY{n}{learning\PYZus{}rate\PYZus{}decay}
+
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}table} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{zeros}\PY{p}{(}\PY{p}{(}\PY{n}{bins} \PY{o}{*}\PY{o}{*} \PY{n}{observation\PYZus{}space}\PY{o}{.}\PY{n}{shape}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{n}{action\PYZus{}space}\PY{o}{.}\PY{n}{n}\PY{p}{)}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{act}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{observation}\PY{p}{)}\PY{p}{:}
+        \PY{n}{observation} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}scale\PYZus{}observation}\PY{p}{(}\PY{n}{observation}\PY{p}{)}
+        \PY{n+nb}{bin} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}bin\PYZus{}observation}\PY{p}{(}\PY{n}{observation}\PY{p}{)}
+
+        \PY{k}{if} \PY{n}{np}\PY{o}{.}\PY{n}{random}\PY{o}{.}\PY{n}{rand}\PY{p}{(}\PY{p}{)} \PY{o}{\PYZlt{}}\PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate}\PY{p}{:}
+            \PY{k}{return} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}action\PYZus{}space}\PY{o}{.}\PY{n}{sample}\PY{p}{(}\PY{p}{)}
+
+        \PY{k}{return} \PY{n}{np}\PY{o}{.}\PY{n}{argmax}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}table}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{learn\PYZus{}from\PYZus{}experience}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{experience}\PY{p}{)}\PY{p}{:}
+        \PY{n}{penalty} \PY{o}{=} \PY{o}{\PYZhy{}}\PY{n+nb}{sum}\PY{p}{(}\PY{n}{step}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]} \PY{k}{for} \PY{n}{step} \PY{o+ow}{in} \PY{n}{experience}\PY{p}{)}
+        \PY{n}{experience\PYZus{}length} \PY{o}{=} \PY{n+nb}{len}\PY{p}{(}\PY{n}{experience}\PY{p}{)}
+        \PY{n}{discount} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}reward\PYZus{}discount}
+
+        \PY{k}{for} \PY{n}{index} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n}{experience\PYZus{}length} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:}
+            \PY{n}{observation}\PY{p}{,} \PY{n}{action}\PY{p}{,} \PY{n}{\PYZus{}} \PY{o}{=} \PY{n}{experience}\PY{p}{[}\PY{n}{index}\PY{p}{]}
+            \PY{n}{observation} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}scale\PYZus{}observation}\PY{p}{(}\PY{n}{observation}\PY{p}{)}
+            \PY{n+nb}{bin} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}bin\PYZus{}observation}\PY{p}{(}\PY{n}{observation}\PY{p}{)}
+
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}table}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{[}\PY{n}{action}\PY{p}{]} \PY{o}{+}\PY{o}{=} \PY{p}{(}
+                \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rates}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{[}\PY{n}{action}\PY{p}{]} \PY{o}{*} \PY{n}{discount} \PY{o}{*} \PY{n}{penalty}
+            \PY{p}{)}
+
+            \PY{n}{discount} \PY{o}{*}\PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}reward\PYZus{}discount}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}update\PYZus{}learning\PYZus{}rate}\PY{p}{(}\PY{n+nb}{bin}\PY{p}{,} \PY{n}{action}\PY{p}{)}
+
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}update\PYZus{}exploration\PYZus{}rate}\PY{p}{(}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{\PYZus{}update\PYZus{}learning\PYZus{}rate}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n+nb}{bin}\PY{p}{,} \PY{n}{action}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rates}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{[}\PY{n}{action}\PY{p}{]} \PY{o}{*}\PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rate\PYZus{}decay}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rates}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{[}\PY{n}{action}\PY{p}{]} \PY{o}{=} \PY{n+nb}{max}\PY{p}{(}
+            \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rate\PYZus{}min}\PY{p}{,} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}learning\PYZus{}rates}\PY{p}{[}\PY{n+nb}{bin}\PY{p}{]}\PY{p}{[}\PY{n}{action}\PY{p}{]}
+        \PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{\PYZus{}update\PYZus{}exploration\PYZus{}rate}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate} \PY{o}{*}\PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate\PYZus{}decay}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate} \PY{o}{=} \PY{n+nb}{max}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate\PYZus{}min}\PY{p}{,} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}exploration\PYZus{}rate}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{\PYZus{}sigmoid}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{x}\PY{p}{)}\PY{p}{:}
+        \PY{k}{return} \PY{l+m+mi}{1} \PY{o}{/} \PY{p}{(}\PY{l+m+mi}{1} \PY{o}{+} \PY{n}{np}\PY{o}{.}\PY{n}{exp}\PY{p}{(}\PY{o}{\PYZhy{}}\PY{n}{x}\PY{p}{)}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{\PYZus{}scale\PYZus{}observation}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{observation}\PY{p}{)}\PY{p}{:}
+        \PY{n}{scaled\PYZus{}observation} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+
+        \PY{k}{for} \PY{n}{index} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}observation\PYZus{}space}\PY{o}{.}\PY{n}{low}\PY{p}{)}\PY{p}{)}\PY{p}{:}
+            \PY{n}{high} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}sigmoid}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}observation\PYZus{}space}\PY{o}{.}\PY{n}{high}\PY{p}{[}\PY{n}{index}\PY{p}{]}\PY{p}{)}
+            \PY{n}{low} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}sigmoid}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}observation\PYZus{}space}\PY{o}{.}\PY{n}{low}\PY{p}{[}\PY{n}{index}\PY{p}{]}\PY{p}{)}
+
+            \PY{n}{scaled\PYZus{}value} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}sigmoid}\PY{p}{(}\PY{n}{observation}\PY{p}{[}\PY{n}{index}\PY{p}{]}\PY{p}{)}
+            \PY{n}{scaled\PYZus{}value} \PY{o}{=} \PY{p}{(}\PY{n}{scaled\PYZus{}value} \PY{o}{\PYZhy{}} \PY{n}{low}\PY{p}{)} \PY{o}{/} \PY{p}{(}\PY{n}{high} \PY{o}{\PYZhy{}} \PY{n}{low}\PY{p}{)}
+            \PY{n}{normalized\PYZus{}value} \PY{o}{=} \PY{n}{scaled\PYZus{}value} \PY{o}{*} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{\PYZus{}bins}
+
+            \PY{n}{scaled\PYZus{}observation}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{n}{normalized\PYZus{}value}\PY{p}{)}\PY{p}{)}
+
+        \PY{k}{return} \PY{n}{scaled\PYZus{}observation}
+
+    \PY{k}{def} \PY{n+nf}{\PYZus{}bin\PYZus{}observation}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{observation}\PY{p}{)}\PY{p}{:}
+        \PY{n+nb}{bin} \PY{o}{=} \PY{l+m+mi}{0}
+        \PY{k}{for} \PY{n}{index} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n}{observation}\PY{p}{)}\PY{p}{)}\PY{p}{:}
+            \PY{n+nb}{bin} \PY{o}{+}\PY{o}{=} \PY{p}{(}\PY{l+m+mi}{2} \PY{o}{*}\PY{o}{*} \PY{n}{index}\PY{p}{)} \PY{o}{*} \PY{n}{observation}\PY{p}{[}\PY{n}{index}\PY{p}{]}
+        \PY{k}{return} \PY{n+nb}{int}\PY{p}{(}\PY{n+nb}{bin}\PY{p}{)}  \PY{c+c1}{\PYZsh{} must be an int since it is used as an index}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{15}{\hspace{4pt}}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{c+c1}{\PYZsh{} Creating objects before training starts}
+
+\PY{n}{plotter} \PY{o}{=} \PY{n}{Plotter}\PY{p}{(}\PY{p}{)}
+\PY{n}{replay\PYZus{}experience} \PY{o}{=} \PY{n}{ReplayExperience}\PY{p}{(}\PY{n}{BUFFER\PYZus{}SIZE}\PY{p}{)}
+\PY{n}{table} \PY{o}{=} \PY{n}{Table}\PY{p}{(}
+    \PY{n}{env}\PY{o}{.}\PY{n}{action\PYZus{}space}\PY{p}{,}
+    \PY{n}{env}\PY{o}{.}\PY{n}{observation\PYZus{}space}\PY{p}{,}
+    \PY{n}{BINS}\PY{p}{,}
+    \PY{n}{REWARD\PYZus{}DISCOUNT}\PY{p}{,}
+    \PY{n}{EXPLORATION\PYZus{}RATE}\PY{p}{,}
+    \PY{n}{EXPLORTATION\PYZus{}RATE\PYZus{}MIN}\PY{p}{,}
+    \PY{n}{EXPLORATION\PYZus{}RATE\PYZus{}DECAY}\PY{p}{,}
+    \PY{n}{LEARNING\PYZus{}RATE\PYZus{}MIN}\PY{p}{,}
+    \PY{n}{LEARNING\PYZus{}RATE\PYZus{}DECAY}\PY{p}{,}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{18}{\hspace{4pt}}
 \begin{Verbatim}[commandchars=\\\{\}]
 \PY{c+c1}{\PYZsh{} Training}
+
+\PY{k}{for} \PY{n}{session} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{SESSIONS} \PY{o}{+} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:}  \PY{c+c1}{\PYZsh{} offset by 1 for better formatting in results}
+    \PY{n}{done} \PY{o}{=} \PY{k+kc}{False}
+    \PY{n}{step} \PY{o}{=} \PY{l+m+mi}{0}
+    \PY{n}{experience} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+
+    \PY{n}{observation} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{reset}\PY{p}{(}\PY{p}{)}
+
+    \PY{k}{while} \PY{o+ow}{not} \PY{n}{done}\PY{p}{:}
+
+        \PY{k}{if} \PY{n}{session} \PY{o}{\PYZpc{}} \PY{n}{RENDER\PYZus{}STEPS} \PY{o}{==} \PY{l+m+mi}{1}\PY{p}{:}
+            \PY{n}{env}\PY{o}{.}\PY{n}{render}\PY{p}{(}\PY{p}{)}
+        \PY{n}{step} \PY{o}{+}\PY{o}{=} \PY{l+m+mi}{1}
+
+        \PY{n}{action} \PY{o}{=} \PY{n}{table}\PY{o}{.}\PY{n}{act}\PY{p}{(}\PY{n}{observation}\PY{p}{)}
+        \PY{n}{observation}\PY{p}{,} \PY{n}{reward}\PY{p}{,} \PY{n}{done}\PY{p}{,} \PY{n}{\PYZus{}} \PY{o}{=} \PY{n}{env}\PY{o}{.}\PY{n}{step}\PY{p}{(}\PY{n}{action}\PY{p}{)}
+
+        \PY{n}{experience}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{p}{(}\PY{n}{observation}\PY{p}{,} \PY{n}{action}\PY{p}{,} \PY{n}{reward}\PY{p}{)}\PY{p}{)}
+
+    \PY{n}{table}\PY{o}{.}\PY{n}{learn\PYZus{}from\PYZus{}experience}\PY{p}{(}\PY{n}{experience}\PY{p}{)}
+    \PY{n}{replay\PYZus{}experience}\PY{o}{.}\PY{n}{make\PYZus{}experience}\PY{p}{(}\PY{n}{step}\PY{p}{,} \PY{n}{experience}\PY{p}{)}
+    \PY{n}{experience} \PY{o}{=} \PY{n}{replay\PYZus{}experience}\PY{o}{.}\PY{n}{get\PYZus{}experience}\PY{p}{(}\PY{p}{)}
+    \PY{n}{table}\PY{o}{.}\PY{n}{learn\PYZus{}from\PYZus{}experience}\PY{p}{(}\PY{n}{experience}\PY{p}{)}
+
+    \PY{c+c1}{\PYZsh{} print(f\PYZdq{}Session \PYZob{}session\PYZcb{} took \PYZob{}step\PYZcb{} steps.\PYZdq{})  \PYZhy{}\PYZhy{} prints too much in Jupyter}
+    \PY{n}{plotter}\PY{o}{.}\PY{n}{add\PYZus{}plot\PYZus{}pair}\PY{p}{(}\PY{n}{session}\PY{p}{,} \PY{n}{step}\PY{p}{)}
+
+\PY{n}{env}\PY{o}{.}\PY{n}{close}\PY{p}{(}\PY{p}{)}
+\PY{n}{plotter}\PY{o}{.}\PY{n}{plot\PYZus{}smooth\PYZus{}graph}\PY{p}{(}\PY{p}{)}
 \end{Verbatim}
 \end{tcolorbox}
 
-    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
-\prompt{In}{incolor}{ }{\hspace{4pt}}
-\begin{Verbatim}[commandchars=\\\{\}]
-\PY{c+c1}{\PYZsh{} VIDEO (HTML) DEMONSTRATION}
-\end{Verbatim}
-\end{tcolorbox}
-
-    \hypertarget{dqn}{%
-\subsubsection{DQN}\label{dqn}}
-
-\hypertarget{ppo}{%
-\subsubsection{PPO}\label{ppo}}
+    Once again, if you do not wish to run the code, some results are shown
+below. Unfortunatly, the graph does not show the legend; the green line
+shows a running average of 100 sessions while the light pink line shows
+the actual values at each session.
 
 
     % Add a bibliography block to the postdoc

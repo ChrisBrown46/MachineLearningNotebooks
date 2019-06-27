@@ -13152,7 +13152,7 @@ div#notebook {
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="Creating-a-Gym-environment">Creating a Gym environment<a class="anchor-link" href="#Creating-a-Gym-environment">&#182;</a></h3><p>To start using OpenAI Gym, one must install it and import it into a Python environment. One can either use a pre-made environment for testing, or build their own.</p>
-<p>For this experiment, I will be using the pre-built 'Acrobot' environment. The state consists of the sin() and cos() of the two rotational joint angles and the joint angular velocities [cos(theta1) sin(theta1) cos(theta2) sin(theta2) thetaDot1 thetaDot2]. The action is either applying +1, 0 or -1 torque on the joint between the two pendulum links. The goal is to get the movable joint above the thin black line. The reward is either 1 or -1, depending on the success of the agent.</p>
+<p>For this experiment, I will be using the pre-built 'CartPole' environment. The state consists of the cart's position and velocity, and the pole's angle and velocity. The actions are applying a force of +1 or -1 to the cart. The goal is to keep the pole balanced for 500 game steps. The reward is 1 on each step for as long as the pole is balanced.</p>
 <p>We can view the action and observation space as follows.</p>
 
 </div>
@@ -13160,12 +13160,12 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">gym</span>
 
-<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;Acrobot-v1&quot;</span><span class="p">)</span>
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;CartPole-v1&quot;</span><span class="p">)</span>
 <span class="n">observation</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Action Space Shape: </span><span class="si">{env.action_space}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -13189,10 +13189,10 @@ div#notebook {
 
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>Action Space Shape: Discrete(3)
+<pre>Action Space Shape: Discrete(2)
 Action Example: 1
-Observation Space Shape: Box(6,)
-Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.08784581  0.05837633]
+Observation Space Shape: Box(4,)
+Observation Example: [ 0.0132411   0.0352145  -0.028805   -0.01244701]
 </pre>
 </div>
 </div>
@@ -13211,7 +13211,7 @@ Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.0878458
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Enables recording</span>
@@ -13240,32 +13240,47 @@ Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.0878458
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>In the prior code block, we take random actions and only utilize the <code>done</code> information to determine if a session has finished. You can either run the code to see the animation for youself, or view the video below.</p>
-
+<video height="320" controls src="assets/cartpole_random.mp4" style="display: block;margin-left: auto;margin-right: auto;"/>
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<video width="320" controls src="assets/acrobot_random_actions.mp4" style="display: block;margin-left: auto;margin-right: auto;"/>
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Building-a-smarter-agent">Building a smarter agent<a class="anchor-link" href="#Building-a-smarter-agent">&#182;</a></h2><h3 id="Tabular">Tabular<a class="anchor-link" href="#Tabular">&#182;</a></h3><p>Tabular methods use arrays and tables to hold an approximate of the value functions. More simply, they store every combination of state/action pairs and hold a perceived value of that pair. This simplifies the learning process because tables are very quick to compute and can give decent results given the state and action spaces are small enough. One can also reduce the size of the state and action spaces to make the agent learn evey quicker due to a smaller table to fill (at the cost of a reduced accuracy). One idea that can be implemented, that I will not use in the Acrobot example, is to transform state values before binning them. For example, one could use a sigmoid function to spread the state values out so that the center distrubtion gets put into more bins while the outliers get grouped together.</p>
-<p>To apply a tabular method to this Acrobot example, we simply need a table that holds every possible state/action pair. Due to the size of this table, I bin the state values into 5 buckets so that there are 3 * 6^5 values to compute. I also add a randomness factor to force my agent to explore more in the beginning then slowly exploit more as it learns. I have the training render a session every 10,000 sessions. To disable this, comment out the render or change the <code>RENDER_STEPS</code> variable.</p>
+<h2 id="Building-a-smarter-agent-with-reinforcement-learning-and-tabular-methods">Building a smarter agent with reinforcement learning and tabular methods<a class="anchor-link" href="#Building-a-smarter-agent-with-reinforcement-learning-and-tabular-methods">&#182;</a></h2><p>Tabular methods use arrays and tables to hold an approximate of the value functions. More simply, they store every combination of state/action pairs and hold a perceived value of that pair. This simplifies the learning process because tables are very quick to compute and can give decent results given the state and action spaces are small enough. One can also reduce the size of the state and action spaces to make the agent learn evey quicker due to a smaller table to fill (at the cost of a reduced accuracy). One idea that can be implemented, that I will not use in the Acrobot example, is to transform state values before binning them. For example, one could use a sigmoid function to spread the state values out so that the center distrubtion gets put into more bins while the outliers get grouped together.</p>
+<p>To apply a tabular method to this CartPole example, we simply need a table that holds every possible state/action pair. Due to the size of this table, I bin the state values into 20 buckets so that there are 2 * 4^20 values to compute. I also add a randomness factor to force my agent to explore more in the beginning then slowly exploit more as it learns. Feel free to edit the global variables (hyperparameters) to see what happens. This tabular method is also very random in how well it does with a small amount of sessions.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Configuration Values</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Configuration Values and Imports</span>
+
+<span class="kn">import</span> <span class="nn">gym</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;CartPole-v1&quot;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="n">RENDER_STEPS</span> <span class="o">=</span> <span class="mi">250</span>
+<span class="n">SESSIONS</span> <span class="o">=</span> <span class="mi">500</span>
+
+<span class="n">BINS</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">REWARD_DISCOUNT</span> <span class="o">=</span> <span class="mf">0.98</span>
+<span class="n">LEARNING_RATE_DECAY</span> <span class="o">=</span> <span class="mf">0.995</span>
+<span class="n">LEARNING_RATE_MIN</span> <span class="o">=</span> <span class="mf">0.150</span>
+<span class="n">EXPLORATION_RATE</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">EXPLORATION_RATE_DECAY</span> <span class="o">=</span> <span class="mf">0.975</span>
+<span class="n">EXPLORTATION_RATE_MIN</span> <span class="o">=</span> <span class="mf">0.005</span>
+
+<span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">20</span>
 </pre></div>
 
     </div>
@@ -13275,10 +13290,66 @@ Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.0878458
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Table Class</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Include a plotting class to show results :]</span>
+
+<span class="k">class</span> <span class="nc">Plotter</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">add_plot_pair</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">plot_and_save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">plot_smooth_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">averaging_filter_length</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">averaging_filter_length</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+            <span class="k">return</span>
+
+        <span class="n">rolling_average</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">)):</span>
+            <span class="n">min_index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">-</span> <span class="p">(</span><span class="n">averaging_filter_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">min_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">0</span> <span class="k">if</span> <span class="n">min_index</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">min_index</span><span class="p">)</span>
+            <span class="n">max_index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="p">(</span><span class="n">averaging_filter_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">max_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">max_index</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">max_index</span>
+            <span class="p">)</span>
+
+            <span class="n">rolling_average</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span><span class="p">[</span><span class="n">min_index</span><span class="p">:</span><span class="n">max_index</span><span class="p">])</span> <span class="o">//</span> <span class="p">(</span><span class="n">max_index</span> <span class="o">-</span> <span class="n">min_index</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Steps Achieved Per Session Over Training Duration&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Sessions&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Steps Achieved Per Session&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">,</span>
+            <span class="n">rolling_average</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#ade6bb&quot;</span><span class="p">,</span>
+            <span class="n">linewidth</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">f</span><span class="s2">&quot;Running Average of </span><span class="si">{averaging_filter_length}</span><span class="s2"> Sessions&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_x_values</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_y_values</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#e6add8&quot;</span><span class="p">,</span>
+            <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">f</span><span class="s2">&quot;Raw Steps Achieved&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 
     </div>
@@ -13288,23 +13359,209 @@ Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.0878458
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Some selective replay experience</span>
+
+<span class="k">class</span> <span class="nc">ReplayExperience</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buffer_size</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_buffer_size</span> <span class="o">=</span> <span class="n">buffer_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forgetfullness</span> <span class="o">=</span> <span class="mf">0.15</span>
+
+    <span class="k">def</span> <span class="nf">get_experience</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">make_experience</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">experience</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer_size</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">value</span><span class="p">,</span> <span class="n">experience</span><span class="p">))</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forgetfullness</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">))]</span>
+
+        <span class="c1"># Find the worst memory and replace it</span>
+        <span class="n">min_value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="n">min_index</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">min_value</span><span class="p">:</span>
+                <span class="n">min_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">min_index</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="k">if</span> <span class="n">min_index</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_buffer</span><span class="p">[</span><span class="n">min_index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">experience</span><span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Main table class that includes data normalization using sigmoids</span>
+
+<span class="k">class</span> <span class="nc">Table</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">action_space</span><span class="p">,</span>
+        <span class="n">observation_space</span><span class="p">,</span>
+        <span class="n">bins</span><span class="p">,</span>
+        <span class="n">reward_dicount</span><span class="p">,</span>
+        <span class="n">exploration_rate</span><span class="p">,</span>
+        <span class="n">exploration_rate_min</span><span class="p">,</span>
+        <span class="n">exploration_rate_decay</span><span class="p">,</span>
+        <span class="n">learning_rate_min</span><span class="p">,</span>
+        <span class="n">learning_rate_decay</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_action_space</span> <span class="o">=</span> <span class="n">action_space</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span> <span class="o">=</span> <span class="n">observation_space</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span> <span class="o">=</span> <span class="n">bins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_reward_discount</span> <span class="o">=</span> <span class="n">reward_dicount</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate</span> <span class="o">=</span> <span class="n">exploration_rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate_min</span> <span class="o">=</span> <span class="n">exploration_rate_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate_decay</span> <span class="o">=</span> <span class="n">exploration_rate_decay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">bins</span> <span class="o">**</span> <span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rate_min</span> <span class="o">=</span> <span class="n">learning_rate_min</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rate_decay</span> <span class="o">=</span> <span class="n">learning_rate_decay</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">bins</span> <span class="o">**</span> <span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">act</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+        <span class="n">observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_observation</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+        <span class="nb">bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bin_observation</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">()</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="nb">bin</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">learn_from_experience</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experience</span><span class="p">):</span>
+        <span class="n">penalty</span> <span class="o">=</span> <span class="o">-</span><span class="nb">sum</span><span class="p">(</span><span class="n">step</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">experience</span><span class="p">)</span>
+        <span class="n">experience_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">experience</span><span class="p">)</span>
+        <span class="n">discount</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reward_discount</span>
+
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">experience_length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">observation</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">experience</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            <span class="n">observation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_observation</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+            <span class="nb">bin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bin_observation</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="nb">bin</span><span class="p">][</span><span class="n">action</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rates</span><span class="p">[</span><span class="nb">bin</span><span class="p">][</span><span class="n">action</span><span class="p">]</span> <span class="o">*</span> <span class="n">discount</span> <span class="o">*</span> <span class="n">penalty</span>
+            <span class="p">)</span>
+
+            <span class="n">discount</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reward_discount</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_learning_rate</span><span class="p">(</span><span class="nb">bin</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_exploration_rate</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_update_learning_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">bin</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rates</span><span class="p">[</span><span class="nb">bin</span><span class="p">][</span><span class="n">action</span><span class="p">]</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rate_decay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rates</span><span class="p">[</span><span class="nb">bin</span><span class="p">][</span><span class="n">action</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rate_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_learning_rates</span><span class="p">[</span><span class="nb">bin</span><span class="p">][</span><span class="n">action</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_exploration_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate_decay</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_exploration_rate</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_scale_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+        <span class="n">scaled_observation</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span><span class="o">.</span><span class="n">low</span><span class="p">)):</span>
+            <span class="n">high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span><span class="o">.</span><span class="n">high</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+            <span class="n">low</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_observation_space</span><span class="o">.</span><span class="n">low</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+
+            <span class="n">scaled_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sigmoid</span><span class="p">(</span><span class="n">observation</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+            <span class="n">scaled_value</span> <span class="o">=</span> <span class="p">(</span><span class="n">scaled_value</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">high</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span>
+            <span class="n">normalized_value</span> <span class="o">=</span> <span class="n">scaled_value</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bins</span>
+
+            <span class="n">scaled_observation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">normalized_value</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">scaled_observation</span>
+
+    <span class="k">def</span> <span class="nf">_bin_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+        <span class="nb">bin</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">observation</span><span class="p">)):</span>
+            <span class="nb">bin</span> <span class="o">+=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="n">index</span><span class="p">)</span> <span class="o">*</span> <span class="n">observation</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">bin</span><span class="p">)</span>  <span class="c1"># must be an int since it is used as an index</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Creating objects before training starts</span>
+
+<span class="n">plotter</span> <span class="o">=</span> <span class="n">Plotter</span><span class="p">()</span>
+<span class="n">replay_experience</span> <span class="o">=</span> <span class="n">ReplayExperience</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="p">)</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">,</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="p">,</span>
+    <span class="n">BINS</span><span class="p">,</span>
+    <span class="n">REWARD_DISCOUNT</span><span class="p">,</span>
+    <span class="n">EXPLORATION_RATE</span><span class="p">,</span>
+    <span class="n">EXPLORTATION_RATE_MIN</span><span class="p">,</span>
+    <span class="n">EXPLORATION_RATE_DECAY</span><span class="p">,</span>
+    <span class="n">LEARNING_RATE_MIN</span><span class="p">,</span>
+    <span class="n">LEARNING_RATE_DECAY</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[18]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Training</span>
-</pre></div>
 
-    </div>
-</div>
-</div>
+<span class="k">for</span> <span class="n">session</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">SESSIONS</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>  <span class="c1"># offset by 1 for better formatting in results</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">experience</span> <span class="o">=</span> <span class="p">[]</span>
 
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># VIDEO (HTML) DEMONSTRATION</span>
+    <span class="n">observation</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">session</span> <span class="o">%</span> <span class="n">RENDER_STEPS</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">env</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+        <span class="n">step</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">action</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+        <span class="n">observation</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+
+        <span class="n">experience</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">observation</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+
+    <span class="n">table</span><span class="o">.</span><span class="n">learn_from_experience</span><span class="p">(</span><span class="n">experience</span><span class="p">)</span>
+    <span class="n">replay_experience</span><span class="o">.</span><span class="n">make_experience</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">experience</span><span class="p">)</span>
+    <span class="n">experience</span> <span class="o">=</span> <span class="n">replay_experience</span><span class="o">.</span><span class="n">get_experience</span><span class="p">()</span>
+    <span class="n">table</span><span class="o">.</span><span class="n">learn_from_experience</span><span class="p">(</span><span class="n">experience</span><span class="p">)</span>
+
+    <span class="c1"># print(f&quot;Session {session} took {step} steps.&quot;)  -- prints too much in Jupyter</span>
+    <span class="n">plotter</span><span class="o">.</span><span class="n">add_plot_pair</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span>
+
+<span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="n">plotter</span><span class="o">.</span><span class="n">plot_smooth_graph</span><span class="p">()</span>
 </pre></div>
 
     </div>
@@ -13315,7 +13572,9 @@ Observation Example: [ 0.99993867  0.01107472  0.99939632 -0.03474194  0.0878458
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="DQN">DQN<a class="anchor-link" href="#DQN">&#182;</a></h3><h3 id="PPO">PPO<a class="anchor-link" href="#PPO">&#182;</a></h3>
+<p>Once again, if you do not wish to run the code, some results are shown below. Unfortunatly, the graph does not show the legend; the green line shows a running average of 100 sessions while the light pink line shows the actual values at each session.</p>
+<p><img height="320" src="assets/cartpole_figure.png" style="display: block;margin-left: auto;margin-right: auto;"/></p>
+<video height="320" controls src="assets/cartpole_trained.mp4" style="display: block;margin-left: auto;margin-right: auto;"/>
 </div>
 </div>
 </div>
