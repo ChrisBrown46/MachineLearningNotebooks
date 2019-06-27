@@ -1,8 +1,8 @@
 cd Notebooks
 for %%f in (*.ipynb) do (
    jupyter-nbconvert --to html %%f
-   del ..\Html\%%~nf.html
-   move %%~nf.html ..\Html\%%~nf.html
+   del ..\docs\%%~nf.html
+   move %%~nf.html ..\docs\%%~nf.html
 
    jupyter-nbconvert --to latex %%f
    del ..\Tex\%%~nf.tex
